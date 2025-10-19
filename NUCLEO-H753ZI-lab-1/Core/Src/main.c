@@ -48,7 +48,7 @@ typedef struct {
 
 /* Private macro -------------------------------------------------------------*/
 /* USER CODE BEGIN PM */
-#define HZ_TO_MILIS_HALF_PERIOD(hz) (1000 / 2 * 1 / (hz))
+#define DEBOUNCE_DELAY_MS 20
 
 #define SHORT_FQ 3
 #define MEDIUM_FQ 5
@@ -58,7 +58,9 @@ typedef struct {
 #define MEDIUM_DELAY_SEC 1
 #define LONG_DELAY_SEC 1
 
-#define DEBOUNCE_DELAY_MS 20
+#define HZ_TO_MILIS_HALF_PERIOD(hz) (1000 / 2 * 1 / (hz))
+
+#define TOGGLES_NUM(fq, delay_sec) (2 * (fq) * (delay_sec))
 
 /* USER CODE END PM */
 
@@ -68,12 +70,12 @@ typedef struct {
 State CurrentState = Init;
 
 StateContext StateContexts[] = { { 0, 0, 0 },
-		{ HZ_TO_MILIS_HALF_PERIOD(SHORT_FQ), 0, SHORT_FQ * 2 * SHORT_DELAY_SEC },
-		{ HZ_TO_MILIS_HALF_PERIOD(MEDIUM_FQ), 0, MEDIUM_FQ * 2 * MEDIUM_DELAY_SEC },
-		{ HZ_TO_MILIS_HALF_PERIOD(LONG_FQ), 0, LONG_FQ * 2 * LONG_DELAY_SEC },
-		{ HZ_TO_MILIS_HALF_PERIOD(LONG_FQ), 0, LONG_FQ * 2 * LONG_DELAY_SEC },
-		{ HZ_TO_MILIS_HALF_PERIOD(SHORT_FQ), 0, MEDIUM_FQ * 2 * MEDIUM_DELAY_SEC },
-		{ HZ_TO_MILIS_HALF_PERIOD(SHORT_FQ), 0, SHORT_FQ * 2 * SHORT_DELAY_SEC } };
+		{ HZ_TO_MILIS_HALF_PERIOD(SHORT_FQ), 0, TOGGLES_NUM(SHORT_FQ, SHORT_DELAY_SEC) },
+		{ HZ_TO_MILIS_HALF_PERIOD(MEDIUM_FQ), 0, TOGGLES_NUM(MEDIUM_FQ, MEDIUM_DELAY_SEC) },
+		{ HZ_TO_MILIS_HALF_PERIOD(LONG_FQ), 0, TOGGLES_NUM(LONG_FQ, LONG_DELAY_SEC) },
+		{ HZ_TO_MILIS_HALF_PERIOD(LONG_FQ), 0, TOGGLES_NUM(LONG_FQ, LONG_DELAY_SEC) },
+		{ HZ_TO_MILIS_HALF_PERIOD(SHORT_FQ), 0, TOGGLES_NUM(MEDIUM_FQ, MEDIUM_DELAY_SEC) },
+		{ HZ_TO_MILIS_HALF_PERIOD(SHORT_FQ), 0, TOGGLES_NUM(SHORT_FQ, SHORT_DELAY_SEC) } };
 
 uint32_t LastDelayTime = 0;
 
