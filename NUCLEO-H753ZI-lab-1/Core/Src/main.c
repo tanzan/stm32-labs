@@ -28,6 +28,17 @@
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
 
+typedef enum {
+	Init, Step1, Step2, Step3, Step4, Step5, Step6
+} State;
+
+typedef struct {
+	uint32_t HalfPeriod;
+	uint32_t TogglesNum;
+	uint32_t MaxTogglesNum;
+
+} StateContext;
+
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
@@ -37,12 +48,34 @@
 
 /* Private macro -------------------------------------------------------------*/
 /* USER CODE BEGIN PM */
+#define HZ_TO_MILIS_HALF_PERIOD(hz) (1000 / 2 * 1 / (hz))
+
+#define SHORT_FQ 3
+#define MEDIUM_FQ 5
+#define LONG_FQ 10
+
+#define SHORT_DELAY_SEC 1
+#define MEDIUM_DELAY_SEC 1
+#define LONG_DELAY_SEC 1
+
+#define DEBOUNCE_DELAY_MS 20
 
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
+State CurrentState = Init;
+
+StateContext StateContexts[] = { { 0, 0, 0 },
+		{ HZ_TO_MILIS_HALF_PERIOD(SHORT_FQ), 0, SHORT_FQ * 2 * SHORT_DELAY_SEC },
+		{ HZ_TO_MILIS_HALF_PERIOD(MEDIUM_FQ), 0, MEDIUM_FQ * 2 * MEDIUM_DELAY_SEC },
+		{ HZ_TO_MILIS_HALF_PERIOD(LONG_FQ), 0, LONG_FQ * 2 * LONG_DELAY_SEC },
+		{ HZ_TO_MILIS_HALF_PERIOD(LONG_FQ), 0, LONG_FQ * 2 * LONG_DELAY_SEC },
+		{ HZ_TO_MILIS_HALF_PERIOD(SHORT_FQ), 0, MEDIUM_FQ * 2 * MEDIUM_DELAY_SEC },
+		{ HZ_TO_MILIS_HALF_PERIOD(SHORT_FQ), 0, SHORT_FQ * 2 * SHORT_DELAY_SEC } };
+
+uint32_t LastDelayTime = 0;
 
 /* USER CODE END PV */
 
@@ -55,63 +88,27 @@ void SystemClock_Config(void);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 
-typedef enum {
-	Init, Step1, Step2, Step3, Step4, Step5, Step6
-} State;
-
-typedef struct {
-	uint32_t HalfPeriod;
-	uint32_t TogglesNum;
-	uint32_t MaxTogglesNum;
-
-} StateContext;
-
-
-State CurrentState = Init;
-
-#define HZ_TO_MILIS_HALF_PERIOD(hz) (1000 / 2 * 1 / (hz))
-
-
-#define SHORT_FQ 3
-#define MEDIUM_FQ 5
-#define LONG_FQ 10
-
-#define SHORT_DELAY_SEC 1
-#define MEDIUM_DELAY_SEC 1
-#define LONG_DELAY_SEC 1
-
-#define DEBOUNCE_DELAY_MS 20
-
-
-StateContext StateContexts[] = {
-		{ 0, 0, 0 },
-		{ HZ_TO_MILIS_HALF_PERIOD(SHORT_FQ), 0, SHORT_FQ * 2 * SHORT_DELAY_SEC },
-		{ HZ_TO_MILIS_HALF_PERIOD(MEDIUM_FQ), 0, MEDIUM_FQ * 2 * MEDIUM_DELAY_SEC },
-		{ HZ_TO_MILIS_HALF_PERIOD(LONG_FQ), 0, LONG_FQ * 2 * LONG_DELAY_SEC },
-		{ HZ_TO_MILIS_HALF_PERIOD(LONG_FQ), 0, LONG_FQ * 2 * LONG_DELAY_SEC },
-		{ HZ_TO_MILIS_HALF_PERIOD(SHORT_FQ), 0, MEDIUM_FQ * 2 * MEDIUM_DELAY_SEC },
-		{ HZ_TO_MILIS_HALF_PERIOD(SHORT_FQ), 0, SHORT_FQ * 2 * SHORT_DELAY_SEC } };
-
 void ToggleLED() {
 	HAL_GPIO_TogglePin(LED_2_GPIO_Port, LED_2_Pin);
+	LastDelayTime = HAL_GetTick();
 	StateContexts[CurrentState].TogglesNum++;
 }
 
-void ResetLed() {
+void ResetLED() {
 	HAL_GPIO_WritePin(LED_2_GPIO_Port, LED_2_Pin, GPIO_PIN_RESET);
 	StateContexts[CurrentState].TogglesNum = 0;
 }
 
-uint32_t GetCurrentHalfPeriod() {
+uint32_t GetHalfPeriod() {
 	return StateContexts[CurrentState].HalfPeriod;
 }
 
-uint32_t IsMaxTogglesNum(){
+uint32_t IsMaxTogglesNum() {
 	StateContext Ctx = StateContexts[CurrentState];
 	return Ctx.MaxTogglesNum == Ctx.TogglesNum;
 }
 
-void GotoState(State state){
+void GotoState(State state) {
 	CurrentState = state;
 	StateContexts[CurrentState].TogglesNum = 0;
 }
@@ -148,41 +145,38 @@ int main(void) {
 	MX_GPIO_Init();
 	/* USER CODE BEGIN 2 */
 	uint32_t LastDebounceTime = 0;
-	uint8_t BtnState = 0;
-	uint8_t LastBtnState = 0;
-	uint8_t TempBtnReading;
-	uint32_t LastDelayTime = 0;
+	uint8_t BtnState = GPIO_PIN_RESET;
+	uint8_t LastBtnState = GPIO_PIN_RESET;
+	uint8_t BtnReading;
 
-
-	ResetLed();
+	ResetLED();
 	/* USER CODE END 2 */
 
 	/* Infinite loop */
 	/* USER CODE BEGIN WHILE */
 	for (;;) {
-		TempBtnReading = HAL_GPIO_ReadPin(BTN_GPIO_Port, BTN_Pin);
-		if (TempBtnReading != LastBtnState) {
+		BtnReading = HAL_GPIO_ReadPin(BTN_GPIO_Port, BTN_Pin);
+		if (BtnReading != LastBtnState) {
 			LastDebounceTime = HAL_GetTick();
 		}
 		if ((HAL_GetTick() - LastDebounceTime) > DEBOUNCE_DELAY_MS) {
-			if (TempBtnReading != BtnState) {
-				BtnState = TempBtnReading;
+			if (BtnReading != BtnState) {
+				BtnState = BtnReading;
 				if (BtnState == 1) {
 					LastDelayTime = HAL_GetTick();
-					ResetLed();
 					if (CurrentState == Init) {
+						ResetLED();
 						GotoState(Step1);
 						ToggleLED();
-					} else if (CurrentState >= Step1 && CurrentState <= Step3) {
+					} else if (CurrentState > Init && CurrentState < Step4) {
+						ResetLED();
 						GotoState(Step4);
 						ToggleLED();
-					} else {
-
 					}
 				}
 			}
 		}
-		LastBtnState = TempBtnReading;
+		LastBtnState = BtnReading;
 		switch (CurrentState) {
 		case Step1:
 			if (IsMaxTogglesNum()) {
@@ -212,7 +206,7 @@ int main(void) {
 		case Step6:
 			if (IsMaxTogglesNum()) {
 				GotoState(Init);
-				ResetLed();
+				ResetLED();
 			}
 			break;
 		default:
@@ -220,8 +214,7 @@ int main(void) {
 		}
 
 		if (CurrentState > Init
-				&& ((HAL_GetTick() - LastDelayTime) >= GetCurrentHalfPeriod())) {
-			LastDelayTime = HAL_GetTick();
+				&& ((HAL_GetTick() - LastDelayTime) >= GetHalfPeriod())) {
 			ToggleLED();
 		}
 		/* USER CODE END WHILE */
