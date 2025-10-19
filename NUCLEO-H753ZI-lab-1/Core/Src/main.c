@@ -179,40 +179,29 @@ int main(void) {
 			}
 		}
 		LastBtnState = BtnReading;
-		switch (CurrentState) {
-		case Step1:
-			if (IsMaxTogglesNum()) {
+		if (IsMaxTogglesNum()) {
+			switch (CurrentState) {
+			case Step1:
 				GotoState(Step2);
-			}
-			break;
-		case Step2:
-			if (IsMaxTogglesNum()) {
+				break;
+			case Step2:
 				GotoState(Step3);
-			}
-			break;
-		case Step3:
-			if (IsMaxTogglesNum()) {
+				break;
+			case Step3:
 				GotoState(Step1);
-			}
-			break;
-		case Step4:
-			if (IsMaxTogglesNum()) {
+				break;
+			case Step4:
 				GotoState(Step5);
-			}
-			break;
-		case Step5:
-			if (IsMaxTogglesNum()) {
+				break;
+			case Step5:
 				GotoState(Step6);
-			}
-			break;
-		case Step6:
-			if (IsMaxTogglesNum()) {
+				break;
+			case Step6:
 				GotoState(Init);
 				ResetLED();
+				break;
+			default:
 			}
-			break;
-		default:
-
 		}
 
 		if (CurrentState > Init
