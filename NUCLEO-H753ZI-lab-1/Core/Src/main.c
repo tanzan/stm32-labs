@@ -29,7 +29,7 @@
 /* USER CODE BEGIN PTD */
 
 typedef enum {
-	Init, Step1, Step2, Step3, Step4, Step5, Step6
+	Init, Step1, Step2, Step3, Step4, Step5, Step6, Stop
 } State;
 
 typedef struct {
@@ -75,7 +75,8 @@ StateContext StateContexts[] = { { 0, 0, 0 },
 		{ HZ_TO_MILIS_HALF_PERIOD(LONG_FQ), 0, TOGGLES_NUM(LONG_FQ, LONG_DELAY_SEC) },
 		{ HZ_TO_MILIS_HALF_PERIOD(LONG_FQ), 0, TOGGLES_NUM(LONG_FQ, LONG_DELAY_SEC) },
 		{ HZ_TO_MILIS_HALF_PERIOD(SHORT_FQ), 0, TOGGLES_NUM(MEDIUM_FQ, MEDIUM_DELAY_SEC) },
-		{ HZ_TO_MILIS_HALF_PERIOD(SHORT_FQ), 0, TOGGLES_NUM(SHORT_FQ, SHORT_DELAY_SEC) } };
+		{ HZ_TO_MILIS_HALF_PERIOD(SHORT_FQ), 0, TOGGLES_NUM(SHORT_FQ, SHORT_DELAY_SEC) },
+		{0, 0, 0} };
 
 uint32_t LastDelayTime = 0;
 
@@ -99,6 +100,10 @@ void ToggleLED() {
 void ResetLED() {
 	HAL_GPIO_WritePin(LED_2_GPIO_Port, LED_2_Pin, GPIO_PIN_RESET);
 	StateContexts[CurrentState].TogglesNum = 0;
+}
+
+void TurnOnLED() {
+	HAL_GPIO_WritePin(LED_2_GPIO_Port, LED_2_Pin, GPIO_PIN_SET);
 }
 
 uint32_t GetHalfPeriod() {
@@ -156,7 +161,7 @@ int main(void) {
 
 	/* Infinite loop */
 	/* USER CODE BEGIN WHILE */
-	for (;;) {
+	while (1) {
 		BtnReading = HAL_GPIO_ReadPin(BTN_GPIO_Port, BTN_Pin);
 		if (BtnReading != LastBtnState) {
 			LastDebounceTime = HAL_GetTick();
@@ -170,7 +175,7 @@ int main(void) {
 						ResetLED();
 						GotoState(Step1);
 						ToggleLED();
-					} else if (CurrentState > Init && CurrentState < Step4) {
+					} else if (CurrentState == Stop) {
 						ResetLED();
 						GotoState(Step4);
 						ToggleLED();
@@ -188,7 +193,7 @@ int main(void) {
 				GotoState(Step3);
 				break;
 			case Step3:
-				GotoState(Step1);
+				GotoState(Stop);
 				break;
 			case Step4:
 				GotoState(Step5);
@@ -200,11 +205,14 @@ int main(void) {
 				GotoState(Init);
 				ResetLED();
 				break;
+			case Stop:
+				TurnOnLED();
+				break;
 			default:
 			}
 		}
 
-		if (CurrentState > Init
+		if (CurrentState > Init && CurrentState < Stop
 				&& ((HAL_GetTick() - LastDelayTime) >= GetHalfPeriod())) {
 			ToggleLED();
 		}
